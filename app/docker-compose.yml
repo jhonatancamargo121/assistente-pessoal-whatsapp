@@ -1,0 +1,26 @@
+services:
+  app:
+    build: .
+    container_name: assistente-app
+    restart: unless-stopped
+    env_file: .env
+    networks:
+    - infra_assistente-net
+    - natelanet
+    healthcheck:
+      test:
+      - CMD
+      - node
+      - -e
+      - require('http').get('http://localhost:3000/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    mem_limit: 1g
+networks:
+  infra_assistente-net:
+    external: true
+  natelanet:
+    external: true
+    name: natela-control_default

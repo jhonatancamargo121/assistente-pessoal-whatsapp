@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Assistente Pessoal — Painel</title>
+<style>
+  :root { --bg:#0d0d0f; --card:#16161a; --bd:#26262c; --ink:#f2f2f4; --mut:#8a8a93; --acc:#ff7a18; --grn:#22c55e; --red:#ef4444; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; font-size:14px; }
+  .hidden { display:none !important; }
+  button { cursor:pointer; font-family:inherit; border:none; border-radius:8px; padding:9px 16px; font-weight:600; font-size:14px; }
+  .btn-primary { background:var(--acc); color:#1a1207; }
+  .btn-ghost { background:transparent; color:var(--mut); border:1px solid var(--bd); }
+  .btn-danger { background:transparent; color:var(--red); border:1px solid #3a1f22; }
+  .mini { padding:4px 9px; font-size:12px; font-weight:600; border-radius:6px; }
+  input,select { width:100%; background:#1d1d22; border:1px solid var(--bd); color:var(--ink); border-radius:8px; padding:9px 12px; font-size:14px; font-family:inherit; }
+  input[type=checkbox]{ width:auto; }
+  label { display:block; font-size:12px; color:var(--mut); margin-bottom:5px; margin-top:12px; }
+  .card { background:var(--card); border:1px solid var(--bd); border-radius:14px; padding:20px; }
+  .badge { display:inline-block; padding:2px 9px; border-radius:99px; font-size:11px; font-weight:700; }
+  .b-ativo { background:#0f2a17; color:#4ade80; } .b-suspenso { background:#2a1f0f; color:#fbbf24; }
+  .b-cancelado { background:#2a1416; color:#f87171; } .b-trial { background:#13202e; color:#60a5fa; }
+  .p-em_dia { background:#0f2a17; color:#4ade80; } .p-vencido { background:#2a1416; color:#f87171; } .p-sem_vencimento { background:#1c1c22; color:#8a8a93; }
+  table { width:100%; border-collapse:collapse; }
+  th { text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--mut); padding:10px 12px; border-bottom:1px solid var(--bd); }
+  td { padding:11px 12px; border-bottom:1px solid #1c1c20; vertical-align:middle; }
+  .modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.55); display:flex; align-items:center; justify-content:center; padding:16px; z-index:50; }
+  .err { background:#2a1416; color:#f87171; padding:9px 12px; border-radius:8px; margin-top:12px; font-size:13px; }
+  .ok { background:#0f2a17; color:#4ade80; padding:9px 12px; border-radius:8px; margin-top:12px; font-size:13px; }
+  .top { display:flex; align-items:center; justify-content:space-between; padding:16px 24px; border-bottom:1px solid var(--bd); }
+  .wrap { max-width:1180px; margin:0 auto; padding:24px; }
+  .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:22px; }
+  .stat h3 { font-size:28px; font-weight:700; } .stat p { color:var(--mut); font-size:12px; margin-top:2px; }
+  h1 { font-size:20px; font-weight:600; } h2 { font-size:16px; font-weight:600; margin-bottom:14px; }
+  .row { display:flex; gap:10px; align-items:center; }
+  .tabs button { background:transparent; color:var(--mut); border:1px solid var(--bd); border-radius:99px; padding:6px 14px; font-size:13px; }
+  .tabs button.on { background:#1d1d22; color:var(--ink); border-color:var(--acc); }
+  .quick { display:flex; gap:6px; flex-wrap:wrap; }
+  .toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#1d1d22; border:1px solid var(--bd); padding:12px 20px; border-radius:10px; z-index:99; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login" class="modal-bg">
+  <div class="card" style="width:360px;">
+    <h1 style="margin-bottom:4px;">Assistente Pessoal</h1>
+    <p style="color:var(--mut); font-size:13px;">Painel administrativo</p>
+    <label>E-mail</label><input id="l-email" type="email" autocomplete="username" />
+    <label>Senha</label><input id="l-senha" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()" />
+    <button class="btn-primary" style="width:100%; margin-top:18px;" onclick="login()">Entrar</button>
+    <div style="text-align:center; margin-top:12px;"><a href="#" onclick="openForgot();return false;" style="color:var(--mut); font-size:13px; text-decoration:none;">Esqueci a senha</a></div>
+    <div id="l-err" class="err hidden"></div>
+  </div>
+</div>
+
+<!-- MODAL ESQUECI A SENHA -->
+<div id="m-forgot" class="modal-bg hidden">
+  <div class="card" style="width:380px;">
+    <h2>Recuperar senha</h2>
+    <!-- passo 1 -->
+    <div id="fg-step1">
+      <p style="color:var(--mut); font-size:13px; margin-bottom:6px;">Enviaremos um código pro WhatsApp de admin cadastrado.</p>
+      <label>Seu e-mail</label><input id="fg-email" type="email" />
+      <div class="row" style="justify-content:flex-end; gap:10px; margin-top:18px;">
+        <button class="btn-ghost" onclick="closeForgot()">Cancelar</button>
+        <button class="btn-primary" onclick="sendCode()">Enviar código</button>
+      </div>
+    </div>
+    <!-- passo 2 -->
+    <div id="fg-step2" class="hidden">
+      <div id="fg-ok" class="ok"></div>
+      <label>Código (6 dígitos)</label><input id="fg-code" inputmode="numeric" maxlength="6" placeholder="000000" />
+      <label>Nova senha (mín. 6)</label><input id="fg-nova" type="password" autocomplete="new-password" />
+      <div class="row" style="justify-content:flex-end; gap:10px; margin-top:18px;">
+        <button class="btn-ghost" onclick="closeForgot()">Cancelar</button>
+        <button class="btn-primary" onclick="doReset()">Redefinir senha</button>
+      </div>
+    </div>
+    <div id="fg-err" class="err hidden"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden">
+  <div class="top">
+    <div class="row" style="gap:14px;"><h1>🤖 Assistente Pessoal</h1></div>
+    <div class="row">
+      <button class="btn-ghost" onclick="openWhats()">📱 Conexão WhatsApp</button>
+      <span id="crm-status" class="badge" style="cursor:pointer;" title="Status da integração com o CRM" onclick="loadCrmStatus(true)">🏢 CRM: …</span>
+      <span id="whoami" style="color:var(--mut); font-size:13px;"></span>
+      <button class="btn-ghost" onclick="openSenha()">🔒 Alterar senha</button>
+      <button class="btn-ghost" onclick="logout()">Sair</button>
+    </div>
+  </div>
+  <div class="wrap">
+    <div class="stats">
+      <div class="card stat"><h3 id="s-ativos">—</h3><p>Assinantes ativos</p></div>
+      <div class="card stat"><h3 id="s-total">—</h3><p>Total cadastrados</p></div>
+      <div class="card stat"><h3 id="s-tarefas">—</h3><p>Tarefas pendentes</p></div>
+      <div class="card stat"><h3 id="s-msgs">—</h3><p>Mensagens (24h)</p></div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="justify-content:space-between; margin-bottom:14px;">
+        <h2 style="margin:0;">Assinantes</h2>
+        <button class="btn-primary" onclick="openNovo()">+ Novo assinante</button>
+      </div>
+      <div class="row tabs" id="tabs" style="margin-bottom:14px;">
+        <button class="on" data-f="todos" onclick="setFilter('todos')">Todos</button>
+        <button data-f="em_dia" onclick="setFilter('em_dia')">🟢 Em dia</button>
+        <button data-f="vencido" onclick="setFilter('vencido')">🔴 Vencidos</button>
+        <button data-f="inativo" onclick="setFilter('inativo')">⚫ Inativos</button>
+      </div>
+      <table>
+        <thead><tr><th>Nome</th><th>Telefone</th><th>Situação</th><th>Pagamento</th><th>Plano</th><th>Última interação</th><th></th></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL NOVO/EDITAR -->
+<div id="m-user" class="modal-bg hidden">
+  <div class="card" style="width:440px;">
+    <h2 id="m-title">Novo assinante</h2>
+    <input type="hidden" id="u-id" />
+    <label>Nome</label><input id="u-nome" />
+    <label>Telefone (DDI+DDD)</label><input id="u-phone" placeholder="5561999998888" />
+    <div class="row" style="gap:12px;">
+      <div style="flex:1;"><label>Situação</label>
+        <select id="u-status"><option value="ativo">Ativo</option><option value="suspenso">Suspenso</option><option value="trial">Trial</option><option value="cancelado">Cancelado</option></select></div>
+      <div style="flex:1;"><label>Plano</label>
+        <select id="u-plano" onchange="onPlanoChange()">
+          <option value="essencial">Essencial</option>
+          <option value="pro">Pro</option>
+          <option value="business">Business</option>
+        </select></div>
+    </div>
+    <div id="u-recursos" style="margin-top:10px; background:#1a1a1f; border:1px solid var(--bd); border-radius:8px; padding:10px 12px; font-size:12.5px; color:var(--mut);"></div>
+    <label>Assinatura paga até</label>
+    <input id="u-ate" type="date" />
+    <div class="quick" style="margin-top:8px;">
+      <button type="button" class="btn-ghost mini" onclick="addDias(30)">+30 dias</button>
+      <button type="button" class="btn-ghost mini" onclick="addDias(90)">+3 meses</button>
+      <button type="button" class="btn-ghost mini" onclick="addDias(365)">+1 ano</button>
+      <button type="button" class="btn-ghost mini" onclick="$('u-ate').value=''">limpar</button>
+    </div>
+    <label id="u-bv-wrap" style="margin-top:16px;"><input type="checkbox" id="u-boasvindas" checked /> Enviar mensagem de boas-vindas no WhatsApp</label>
+    <hr style="border:none; border-top:1px solid var(--bd); margin:14px 0;" />
+    <label style="margin-top:4px;">🏢 <b>CRM</b> — email da conta do cliente no natela-control</label>
+    <input id="u-crm-email" type="email" placeholder="cliente@email.com  (vazio = CRM desligado)" />
+    <div style="color:var(--mut);font-size:12px;margin-top:4px;">Preencher = <b>liga o CRM</b> e os leads criados vão pra <b>essa conta</b>. Vazio = CRM desligado.</div>
+    <div class="row" style="justify-content:flex-end; gap:10px; margin-top:18px;">
+      <button class="btn-ghost" onclick="closeUser()">Cancelar</button>
+      <button class="btn-primary" onclick="saveUser()">Salvar</button>
+    </div>
+    <div id="u-err" class="err hidden"></div>
+  </div>
+</div>
+
+<!-- MODAL WHATSAPP -->
+<div id="m-whats" class="modal-bg hidden">
+  <div class="card" style="width:380px; text-align:center;">
+    <h2>Conexão WhatsApp</h2>
+    <div id="w-status" style="color:var(--mut); margin-bottom:14px;">—</div>
+    <div id="w-qrbox"></div>
+    <div class="row" style="justify-content:center; gap:10px; margin-top:16px;">
+      <button class="btn-ghost" onclick="loadQr()">Gerar/Atualizar QR</button>
+      <button class="btn-ghost" onclick="closeWhats()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ALTERAR SENHA -->
+<div id="m-senha" class="modal-bg hidden">
+  <div class="card" style="width:380px;">
+    <h2>Minha conta</h2>
+    <label>📱 Telefone de recuperação (DDI+DDD)</label>
+    <div class="row" style="gap:8px;">
+      <input id="ac-phone" placeholder="5561999998888" />
+      <button class="btn-ghost mini" style="white-space:nowrap" onclick="savePhone()">salvar</button>
+    </div>
+    <p style="color:var(--mut); font-size:12px; margin-top:6px;">É pra cá que vai o código se você esquecer a senha.</p>
+    <hr style="border:none; border-top:1px solid var(--bd); margin:16px 0;" />
+    <label>Senha atual</label><input id="sa-atual" type="password" autocomplete="current-password" />
+    <label>Nova senha (mín. 6)</label><input id="sa-nova" type="password" autocomplete="new-password" />
+    <label>Confirmar nova senha</label><input id="sa-conf" type="password" autocomplete="new-password" />
+    <div class="row" style="justify-content:flex-end; gap:10px; margin-top:18px;">
+      <button class="btn-ghost" onclick="closeSenha()">Cancelar</button>
+      <button class="btn-primary" onclick="saveSenha()">Salvar</button>
+    </div>
+    <div id="sa-err" class="err hidden"></div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let USERS = [], FILTER = "todos";
+
+async function api(path, opts={}) {
+  // Fallback de sessão: além do cookie, manda o token salvo (navegadores que bloqueiam cookie)
+  const tk = localStorage.getItem("painel_token");
+  const hdrs = {"Content-Type":"application/json", ...(tk ? {"Authorization":"Bearer "+tk} : {})};
+  const r = await fetch("/api"+path, { headers:hdrs, credentials:"same-origin", ...opts });
+  if (r.status === 401 && !path.startsWith("/auth/login")) { localStorage.removeItem("painel_token"); showLogin(); throw new Error("401"); }
+  const data = await r.json().catch(()=>({}));
+  if (!r.ok) throw Object.assign(new Error(data.mensagem||data.error||"erro"), { data });
+  return data;
+}
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.remove("hidden"); setTimeout(()=>t.classList.add("hidden"),3000); }
+function showLogin(){ $("login").classList.remove("hidden"); $("app").classList.add("hidden"); }
+function showApp(){ $("login").classList.add("hidden"); $("app").classList.remove("hidden"); }
+
+async function login() {
+  $("l-err").classList.add("hidden");
+  try {
+    const d = await api("/auth/login", { method:"POST", body: JSON.stringify({ email:$("l-email").value, senha:$("l-senha").value }) });
+    if (d.token) localStorage.setItem("painel_token", d.token);
+    $("whoami").textContent = d.admin.nome || d.admin.email;
+    showApp(); load();
+  } catch(e){ $("l-err").textContent = "E-mail ou senha incorretos."; $("l-err").classList.remove("hidden"); }
+}
+async function logout(){ try{await api("/auth/logout",{method:"POST"});}catch{} localStorage.removeItem("painel_token"); showLogin(); }
+
+async function openSenha(){ $("sa-atual").value=""; $("sa-nova").value=""; $("sa-conf").value=""; $("sa-err").classList.add("hidden"); $("ac-phone").value=""; $("m-senha").classList.remove("hidden"); try{ const d=await api("/auth/perfil"); $("ac-phone").value=d.perfil?.phone||""; }catch{} }
+function closeSenha(){ $("m-senha").classList.add("hidden"); }
+async function savePhone(){ try{ await api("/auth/perfil",{method:"POST",body:JSON.stringify({phone:$("ac-phone").value.replace(/\D/g,"")})}); toast("Telefone salvo ✅"); }catch(e){ toast(e.message); } }
+
+// Esqueci a senha
+function openForgot(){ $("m-forgot").classList.remove("hidden"); $("fg-step1").classList.remove("hidden"); $("fg-step2").classList.add("hidden"); $("fg-err").classList.add("hidden"); $("fg-email").value=$("l-email").value||""; }
+function closeForgot(){ $("m-forgot").classList.add("hidden"); }
+async function sendCode(){
+  $("fg-err").classList.add("hidden");
+  try { const d=await api("/auth/forgot",{method:"POST",body:JSON.stringify({email:$("fg-email").value})});
+    $("fg-ok").textContent=d.mensagem; $("fg-step1").classList.add("hidden"); $("fg-step2").classList.remove("hidden");
+  } catch(e){ $("fg-err").textContent=e.message; $("fg-err").classList.remove("hidden"); }
+}
+async function doReset(){
+  $("fg-err").classList.add("hidden");
+  try { const d=await api("/auth/reset",{method:"POST",body:JSON.stringify({email:$("fg-email").value,code:$("fg-code").value.replace(/\D/g,""),senha_nova:$("fg-nova").value})});
+    closeForgot(); toast(d.mensagem); $("l-email").value=$("fg-email").value;
+  } catch(e){ $("fg-err").textContent=e.message; $("fg-err").classList.remove("hidden"); }
+}
+async function saveSenha(){
+  $("sa-err").classList.add("hidden");
+  const nova=$("sa-nova").value, conf=$("sa-conf").value;
+  if(nova.length<6){ $("sa-err").textContent="A nova senha precisa ter ao menos 6 caracteres."; $("sa-err").classList.remove("hidden"); return; }
+  if(nova!==conf){ $("sa-err").textContent="As senhas não conferem."; $("sa-err").classList.remove("hidden"); return; }
+  try { await api("/auth/change-password",{method:"POST",body:JSON.stringify({senha_atual:$("sa-atual").value,senha_nova:nova})}); closeSenha(); toast("Senha alterada ✅"); }
+  catch(e){ $("sa-err").textContent=e.message; $("sa-err").classList.remove("hidden"); }
+}
+
+const STB = { ativo:"b-ativo", suspenso:"b-suspenso", cancelado:"b-cancelado", trial:"b-trial" };
+const STLBL = { ativo:"Ativo", suspenso:"Suspenso", cancelado:"Cancelado", trial:"Trial" };
+const PLBL = { em_dia:"🟢 Em dia", vencido:"🔴 Vencido", sem_vencimento:"sem venc." };
+function fdate(d){ if(!d) return "—"; try { return new Date(d+ (d.length<=10?"T00:00":"")).toLocaleDateString("pt-BR"); } catch { return d; } }
+function fdt(d){ if(!d) return "nunca"; try { return new Date(d).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}); } catch { return d; } }
+
+function setFilter(f){ FILTER=f; document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on", b.dataset.f===f)); render(); }
+function passaFiltro(u){
+  if(FILTER==="todos") return true;
+  if(FILTER==="inativo") return u.status!=="ativo";
+  if(FILTER==="em_dia") return u.status==="ativo" && u.pagamento!=="vencido";
+  if(FILTER==="vencido") return u.pagamento==="vencido";
+  return true;
+}
+
+async function load() {
+  try {
+    const s = await api("/admin/stats");
+    $("s-ativos").textContent=s.ativos; $("s-total").textContent=s.total;
+    $("s-tarefas").textContent=s.tarefas_pendentes; $("s-msgs").textContent=s.msgs_24h;
+    const { usuarios } = await api("/admin/usuarios");
+    USERS = usuarios; render();
+    loadCrmStatus();
+  } catch(e){ if(e.message!=="401") alert(e.message); }
+}
+
+async function loadCrmStatus(avisar){
+  const el = $("crm-status"); if(!el) return;
+  el.textContent = "🏢 CRM: …"; el.style.background="#1c1c22"; el.style.color="#8a8a93";
+  try {
+    const s = await api("/admin/crm/status");
+    if (s.ok) {
+      el.textContent = "🏢 CRM: conectado" + (typeof s.total_leads==="number" ? " ("+s.total_leads+" leads)" : "");
+      el.style.background="#0f2a17"; el.style.color="#4ade80";
+      if(avisar) alert("CRM conectado ✅\nModo: "+s.modo+(typeof s.total_leads==="number"?("\nLeads visíveis: "+s.total_leads):""));
+    } else {
+      el.textContent = "🏢 CRM: offline";
+      el.style.background="#2a1416"; el.style.color="#f87171";
+      if(avisar) alert("CRM offline ❌\n"+(s.erro||"sem detalhe"));
+    }
+  } catch(e){
+    el.textContent = "🏢 CRM: erro"; el.style.background="#2a1416"; el.style.color="#f87171";
+    if(avisar) alert("Falha ao consultar status do CRM: "+e.message);
+  }
+}
+
+function render(){
+  const list = USERS.filter(passaFiltro);
+  $("tbody").innerHTML = list.map(u => `
+      <tr>
+        <td>${u.nome||"—"}${u.welcome_enviada?"":' <span title="boas-vindas não enviada" style="color:var(--mut)">•</span>'}</td>
+        <td style="font-family:monospace;color:var(--mut)">${u.phone}</td>
+        <td><span class="badge ${STB[u.status]||""}">${STLBL[u.status]||u.status}</span></td>
+        <td><span class="badge p-${u.pagamento}">${PLBL[u.pagamento]||u.pagamento}</span> ${u.assinatura_ate?`<span style="color:var(--mut);font-size:11px">${fdate(u.assinatura_ate)}</span>`:""}</td>
+        <td>${u.plano}</td>
+        <td style="color:var(--mut)">${fdt(u.last_interaction_at)}</td>
+        <td>
+          <div class="quick" style="justify-content:flex-end">
+            <button class="btn-ghost mini" onclick="renovar('${u.id}')">+30d</button>
+            <button class="btn-ghost mini" onclick="toggle('${u.id}')">${u.status==='ativo'?'desativar':'ativar'}</button>
+            <button class="btn-ghost mini" onclick='editUser(${JSON.stringify(u)})'>editar</button>
+            <button class="btn-ghost mini" onclick="resendBV('${u.id}')">📨</button>
+            <button class="btn-danger mini" onclick="delUser('${u.id}','${(u.nome||u.phone)}')">excluir</button>
+          </div>
+        </td>
+      </tr>`).join("") || `<tr><td colspan="7" style="text-align:center;color:var(--mut);padding:30px">Nenhum assinante neste filtro.</td></tr>`;
+}
+
+// Definição dos planos (categorias de assinatura) e os recursos de cada um.
+const PLANOS = {
+  essencial: { nome:"Essencial", crm:false, recursos:["Tarefas, rotinas e lembretes","Finanças (gastos, entradas, saldo)","Relatório semanal","Áudio e texto"] },
+  pro:       { nome:"Pro",       crm:false, recursos:["Tudo do Essencial","🌤️ Clima e 💱 cotações","Comprovante por foto","Controle por planilha"] },
+  business:  { nome:"Business",  crm:true,  recursos:["Tudo do Pro","🔥 Hábitos & sequências","🏢 CRM (leads + pagamentos)","Documentos e prioridade"] },
+};
+function planoKey(p){ return PLANOS[p] ? p : (p==="pro" ? "pro" : "essencial"); } // legado free→essencial
+function renderRecursos(){
+  const p=PLANOS[planoKey($("u-plano").value)];
+  $("u-recursos").innerHTML = `<b style="color:var(--ink)">Plano ${p.nome} inclui:</b><br>` + p.recursos.map(r=>"• "+r).join("<br>");
+}
+function onPlanoChange(){ renderRecursos(); }
+
+function openNovo(){ $("m-title").textContent="Novo assinante"; $("u-id").value=""; $("u-nome").value=""; $("u-phone").value=""; $("u-status").value="ativo"; $("u-plano").value="essencial"; $("u-ate").value=""; $("u-crm-email").value=""; renderRecursos(); $("u-bv-wrap").classList.remove("hidden"); $("u-boasvindas").checked=true; $("u-err").classList.add("hidden"); $("m-user").classList.remove("hidden"); }
+function editUser(u){ $("m-title").textContent="Editar assinante"; $("u-id").value=u.id; $("u-nome").value=u.nome||""; $("u-phone").value=u.phone; $("u-status").value=u.status; $("u-plano").value=planoKey(u.plano); $("u-ate").value=u.assinatura_ate?u.assinatura_ate.slice(0,10):""; $("u-crm-email").value=u.crm_email||""; renderRecursos(); $("u-bv-wrap").classList.add("hidden"); $("u-err").classList.add("hidden"); $("m-user").classList.remove("hidden"); }
+function closeUser(){ $("m-user").classList.add("hidden"); }
+function addDias(n){ const base=$("u-ate").value? new Date($("u-ate").value+"T00:00") : new Date(); base.setDate(base.getDate()+n); $("u-ate").value=base.toISOString().slice(0,10); }
+
+async function saveUser() {
+  $("u-err").classList.add("hidden");
+  const id=$("u-id").value;
+  const crmEmail=$("u-crm-email").value.trim()||null;
+  const body={ nome:$("u-nome").value, phone:$("u-phone").value.replace(/\D/g,""), status:$("u-status").value, plano:$("u-plano").value, assinatura_ate:$("u-ate").value||null, crm_email:crmEmail, crm_ativo:!!crmEmail };
+  try {
+    if(id){ await api("/admin/usuarios/"+id,{method:"PATCH",body:JSON.stringify(body)}); toast("Assinante atualizado ✅"); }
+    else { body.enviar_boas_vindas=$("u-boasvindas").checked; const r=await api("/admin/usuarios",{method:"POST",body:JSON.stringify(body)});
+      toast(r.boas_vindas==="enviada"?"Cadastrado + boas-vindas enviada ✅":(r.boas_vindas==="falhou_whatsapp"?"Cadastrado (boas-vindas falhou — WhatsApp conectado?)":"Cadastrado ✅")); }
+    closeUser(); load();
+  } catch(e){ $("u-err").textContent=e.message; $("u-err").classList.remove("hidden"); }
+}
+async function delUser(id,nome){ if(!confirm(`Excluir ${nome}? Isso apaga tarefas e dados dele.`)) return; await api("/admin/usuarios/"+id,{method:"DELETE"}); toast("Excluído"); load(); }
+async function renovar(id){ const r=await api("/admin/usuarios/"+id+"/renovar",{method:"POST",body:JSON.stringify({dias:30})}); toast("Renovado até "+fdate(r.assinatura_ate)+" ✅"); load(); }
+async function toggle(id){ const r=await api("/admin/usuarios/"+id+"/toggle",{method:"POST"}); toast(r.status==="ativo"?"Ativado ✅":"Desativado"); load(); }
+async function resendBV(id){ const r=await api("/admin/usuarios/"+id+"/boas-vindas",{method:"POST"}); toast(r.mensagem); }
+
+// WhatsApp
+function openWhats(){ $("m-whats").classList.remove("hidden"); $("w-qrbox").innerHTML=""; wStatus(); }
+function closeWhats(){ $("m-whats").classList.add("hidden"); }
+async function wStatus(){ try { const s=await api("/admin/whatsapp/status"); const st=s?.instance?.state||s?.state||"desconhecido"; $("w-status").innerHTML=`Estado: <b style="color:${st==='open'?'var(--grn)':'var(--mut)'}">${st==='open'?'Conectado ✅':st}</b>`; } catch{ $("w-status").textContent="indisponível"; } }
+async function loadQr(){
+  $("w-qrbox").innerHTML="<p style='color:var(--mut)'>Gerando…</p>";
+  try { const d=await api("/admin/whatsapp/qr"); const b64=d?.base64||d?.qrcode?.base64;
+    if(b64){ const src=b64.startsWith("data:")?b64:("data:image/png;base64,"+b64); $("w-qrbox").innerHTML=`<img src="${src}" style="width:240px;height:240px;border-radius:10px;background:#fff;padding:8px"/><p style="color:var(--mut);font-size:12px;margin-top:8px">WhatsApp → Aparelhos conectados → escaneie</p>`; }
+    else { $("w-qrbox").innerHTML="<p style='color:var(--mut)'>Já conectado ou QR indisponível.</p>"; wStatus(); }
+  } catch(e){ $("w-qrbox").innerHTML="<p style='color:var(--red)'>"+e.message+"</p>"; }
+}
+
+api("/auth/me").then(d=>{ $("whoami").textContent=d.admin.nome||d.admin.email; showApp(); load(); }).catch(()=>showLogin());
+</script>
+</body>
+</html>
